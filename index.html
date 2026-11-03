@@ -38,12 +38,13 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
 /* Minimal stand-in for the dashboard runtime: loads the CSV snapshots and redraws. */
 (function () {
   const files = { sites: 'data/sites.csv', error_types: 'data/error_types.csv', issues: 'data/issues.csv', excluded: 'data/excluded.csv' };
-  const store = {}; const calcs = {}; const draws = {};
+  const store = {}; const calcs = {}; const draws = {}; const ready = [];
   for (const id in files) store[id] = { status: 'loading', data: [] };
   const runDraw = (name) => document.querySelectorAll('[data-draw="' + name + '"]').forEach((el) => { try { draws[name](el); } catch (e) { console.error(e); } });
   window.dash = {
     data: (id) => store[id] || { status: 'missing', data: [] },
     calc: (id, spec) => { calcs[id] = spec; store[id] = { status: 'loading', data: [] }; },
+    onReady: (fn) => ready.push(fn),
     draw: (name, fn) => { if (fn) draws[name] = fn; if (draws[name] && document.readyState !== 'loading') runDraw(name); },
   };
   const all = () => Object.keys(draws).forEach(runDraw);
@@ -57,6 +58,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
         else store[id] = { status: 'error', data: [] };
       }
       all();
+      ready.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
     });
   document.addEventListener('DOMContentLoaded', all);
 })();
@@ -100,7 +102,33 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
 .mx-tools input, .mx-tools select { font: inherit; font-size: var(--cds-font-size-body); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); min-width: 0; }
 .mx-tools input { width: min(100%, 18rem); }
 .mx-count { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-left: auto; }
-.mx-hide-narrow { }
+.mx-sitebtn { all: unset; cursor: pointer; font-weight: 500; color: var(--color-fg); text-decoration: underline; text-decoration-color: var(--color-border-line); text-underline-offset: 3px; }
+.mx-sitebtn:hover { text-decoration-color: currentColor; }
+.mx-sitebtn:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; border-radius: 2px; }
+tr.mx-clickrow { cursor: pointer; }
+tr.mx-clickrow:hover td { background: color-mix(in srgb, var(--color-fg) 4%, transparent); }
+.mx-sitebar { display: flex; flex-direction: column; gap: var(--cds-gap-md); padding: var(--cds-pad-md); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); }
+.mx-sitebar-head { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); justify-content: space-between; align-items: start; }
+.mx-sitebar h3 { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 1.5rem; }
+.mx-eyebrow { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.mx-btn { font: inherit; font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); cursor: pointer; }
+.mx-btn:hover { border-color: var(--color-fg-muted); }
+.mx-stats { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xl); font-variant-numeric: tabular-nums; }
+.mx-stat { display: flex; flex-direction: column; gap: 2px; }
+.mx-stat b { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 1.5rem; line-height: 1.1; }
+.mx-stat span { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mx-chips { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); }
+.mx-chip { font: inherit; font-size: var(--cds-font-size-caption); display: inline-flex; align-items: center; gap: var(--cds-gap-xs); padding: 0.25rem 0.625rem; border-radius: 999px; border: 1px solid var(--color-border-line); background: var(--color-panel); color: var(--color-fg); cursor: pointer; text-align: left; }
+.mx-chip:hover { border-color: var(--color-fg-muted); }
+.mx-chip[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); border-color: var(--color-fg); }
+.mx-chip .mx-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: currentColor; flex: none; }
+.mx-chip[aria-pressed="true"] .mx-dot { background: var(--color-bg); }
+.mx-chip .mx-t { color: var(--color-fg); }
+.mx-chip[aria-pressed="true"] .mx-t { color: var(--color-bg); }
+.mx-chip .mx-c { font-variant-numeric: tabular-nums; color: var(--color-fg-muted); }
+.mx-chip[aria-pressed="true"] .mx-c { color: var(--color-bg); }
+#mx-issues-title:focus { outline: none; }
+.mx-empty { color: var(--color-ok); font-size: var(--cds-font-size-body); }
 @media (max-width: 640px) { .mx-hide-narrow { display: none; } }
 [data-dash-source-state=empty] { color: transparent; }
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
@@ -155,8 +183,23 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
   </section>
 
   <section class="mx-card" id="issues">
-    <h2>Issue list</h2>
-    <p class="mx-note">Every content error with an example page and the failing HTML. Filter by site or severity, or search any text.</p>
+    <h2 id="mx-issues-title" tabindex="-1">Issue list</h2>
+    <p class="mx-note">Every content error with an example page and the failing HTML. Click a site in the Sites panel to see only its issues, or filter by site, severity or any text.</p>
+    <div class="mx-sitebar" id="mx-sitebar" hidden>
+      <div class="mx-sitebar-head">
+        <div>
+          <div class="mx-eyebrow">Site</div>
+          <h3 id="mx-sitename"></h3>
+          <a id="mx-siteurl" class="mx-url" target="_blank" rel="noopener"></a>
+        </div>
+        <button type="button" class="mx-btn" id="mx-allsites">Show all sites</button>
+      </div>
+      <div class="mx-stats" data-draw="sitestats"></div>
+      <div>
+        <div class="mx-eyebrow" style="margin-bottom: var(--cds-gap-sm);">Errors on this site. Click one to filter.</div>
+        <div class="mx-chips" data-draw="sitetypes"></div>
+      </div>
+    </div>
     <div class="mx-tools">
       <label for="mx-site">Site
         <select id="mx-site" data-draw="sitepick" data-source="sites"></select>
@@ -277,9 +320,14 @@ dash.draw('sitesrows', (tb) => {
   const rows = d.data.slice().sort((a, b) => num(b.content_issues) - num(a.content_issues) || a.site.localeCompare(b.site));
   const max = d3.max(rows, (r) => num(r.content_issues));
   for (const r of rows) {
-    const tr = document.createElement('tr'); tr.dataset.key = r.site;
+    const tr = document.createElement('tr'); tr.dataset.key = r.site; tr.className = 'mx-clickrow';
+    tr.addEventListener('click', (ev) => { if (!ev.target.closest('a, button')) openSite(r.site); });
     const c = document.createElement('td');
-    const name = document.createElement('div'); name.textContent = r.site;
+    const name = document.createElement('div');
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'mx-sitebtn'; btn.textContent = r.site;
+    btn.setAttribute('aria-label', 'Show issues for ' + r.site);
+    btn.addEventListener('click', () => openSite(r.site));
+    name.appendChild(btn);
     const u = document.createElement('a'); u.className = 'mx-url'; u.href = r.url; u.target = '_blank'; u.rel = 'noopener'; u.textContent = r.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
     c.append(name, u); tr.appendChild(c);
     barTd(tr, num(r.content_issues), max, false);
@@ -293,16 +341,17 @@ dash.draw('sitesrows', (tb) => {
 dash.draw('sitepick', (sel) => {
   const d = dash.data('sites');
   const cur = sel.value;
-  const names = d.status === 'ok' ? d.data.filter((r) => num(r.content_issues) > 0).map((r) => r.site).sort() : [];
+  const names = d.status === 'ok' ? d.data.map((r) => r.site).sort() : [];
   sel.replaceChildren(new Option('All sites', ''), ...names.map((n) => new Option(n, n)));
   sel.value = names.includes(cur) ? cur : '';
 });
 
+const state = { errType: '' };
 const issueFilter = () => {
   const site = (document.querySelector('#mx-site') || {}).value || '';
   const sev = (document.querySelector('.mx-sev-filter') || {}).value || '';
   const q = ((document.querySelector('.mx-search') || {}).value || '').trim().toLowerCase();
-  return (r) => (!site || r.site === site) && (!sev || r.severity === sev) &&
+  return (r) => (!site || r.site === site) && (!sev || r.severity === sev) && (!state.errType || r.error === state.errType) &&
     (!q || [r.site, r.error, r.example_page, r.html_snippet, r.wcag].join(' ').toLowerCase().includes(q));
 };
 
@@ -336,9 +385,91 @@ dash.draw('shown', (el) => {
   el.textContent = d.status === 'ok' ? fmt(d.data.filter(issueFilter()).length) : '—';
 });
 
-const redrawIssues = () => { dash.draw('issuerows'); dash.draw('shown'); };
-document.querySelectorAll('#mx-site, .mx-sev-filter').forEach((el) => el.addEventListener('change', redrawIssues));
+const currentSite = () => (document.querySelector('#mx-site') || {}).value || '';
+const sevRank = { high: 0, medium: 1, low: 2 };
+
+const renderSiteBar = () => {
+  const bar = document.querySelector('#mx-sitebar');
+  if (!bar) return;
+  const site = currentSite();
+  bar.hidden = !site;
+  if (!site) return;
+  const s = (dash.data('sites').data || []).find((r) => r.site === site) || {};
+  const nameEl = document.querySelector('#mx-sitename'); if (nameEl) nameEl.textContent = site;
+  const urlEl = document.querySelector('#mx-siteurl');
+  if (urlEl) { urlEl.href = s.url || '#'; urlEl.textContent = (s.url || '').replace(/^https?:\/\//, '').replace(/\/$/, ''); }
+  dash.draw('sitestats'); dash.draw('sitetypes');
+};
+
+dash.draw('sitestats', (el) => {
+  el.replaceChildren();
+  const site = currentSite();
+  const s = (dash.data('sites').data || []).find((r) => r.site === site);
+  if (!s) return;
+  const stat = (value, label) => { const d = document.createElement('div'); d.className = 'mx-stat'; const b = document.createElement('b'); b.textContent = value; const l = document.createElement('span'); l.textContent = label; d.append(b, l); el.appendChild(d); };
+  stat(fmt(num(s.content_issues)), 'content error instances');
+  stat(fmt(num(s.pages_with_content_errors)), 'pages with errors');
+  stat(fmt(num(s.pages_scanned)), 'pages scanned');
+});
+
+dash.draw('sitetypes', (el) => {
+  el.replaceChildren();
+  const site = currentSite();
+  const d = dash.data('issues');
+  if (!site || d.status !== 'ok') return;
+  const groups = d3.rollups(d.data.filter((r) => r.site === site), (v) => ({ n: v.length, sev: v[0].severity }), (r) => r.error)
+    .sort((a, b) => sevRank[a[1].sev] - sevRank[b[1].sev] || b[1].n - a[1].n);
+  if (!groups.length) {
+    const p = document.createElement('p'); p.className = 'mx-empty'; p.textContent = 'No content errors on this site.'; el.appendChild(p); return;
+  }
+  const chip = (label, count, sev, value) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'mx-chip' + (sev ? ' mx-sev-' + sev : '');
+    b.setAttribute('aria-pressed', String(state.errType === value));
+    if (sev) { const dot = document.createElement('span'); dot.className = 'mx-dot'; b.appendChild(dot); }
+    const t = document.createElement('span'); t.className = 'mx-t'; t.textContent = label;
+    const c = document.createElement('span'); c.className = 'mx-c'; c.textContent = fmt(count);
+    b.append(t, c);
+    b.addEventListener('click', () => { state.errType = state.errType === value ? '' : value; redrawIssues(); });
+    el.appendChild(b);
+  };
+  chip('All errors', d3.sum(groups, (g) => g[1].n), '', '');
+  for (const [name, g] of groups) chip(name, g.n, g.sev, name);
+});
+
+const setHash = () => {
+  const site = currentSite();
+  const h = site ? '#site=' + encodeURIComponent(site) : '';
+  if (location.hash !== h) history.replaceState(null, '', h || location.pathname + location.search);
+};
+
+function redrawIssues() { dash.draw('issuerows'); dash.draw('shown'); renderSiteBar(); }
+
+function openSite(name) {
+  const sel = document.querySelector('#mx-site');
+  if (!sel) return;
+  sel.value = name;
+  state.errType = '';
+  redrawIssues(); setHash();
+  const sec = document.querySelector('#issues');
+  if (sec) sec.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  const h = document.querySelector('#mx-issues-title'); if (h) h.focus({ preventScroll: true });
+}
+
+document.querySelectorAll('#mx-site').forEach((el) => el.addEventListener('change', () => { state.errType = ''; redrawIssues(); setHash(); }));
+document.querySelectorAll('.mx-sev-filter').forEach((el) => el.addEventListener('change', redrawIssues));
 document.querySelectorAll('.mx-search').forEach((el) => el.addEventListener('input', redrawIssues));
+document.querySelectorAll('#mx-allsites').forEach((el) => el.addEventListener('click', () => {
+  const sel = document.querySelector('#mx-site'); if (sel) sel.value = '';
+  state.errType = ''; redrawIssues(); setHash();
+  const s = document.querySelector('#by-site'); if (s) s.scrollIntoView({ block: 'start' });
+}));
+
+const openFromHash = () => {
+  const m = location.hash.match(/^#site=(.+)$/);
+  if (m) openSite(decodeURIComponent(m[1]));
+};
+dash.onReady(openFromHash);
+window.addEventListener('hashchange', openFromHash);
 
 dash.draw('exrows', (tb) => {
   const d = dash.data('excluded');
