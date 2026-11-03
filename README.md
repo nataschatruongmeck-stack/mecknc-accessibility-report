@@ -6,3 +6,5 @@ Shared template issues (external-link and social media icons, empty component he
 
 - `index.html`: the report page
 - `data/`: the CSV files the page reads
+
+Each error type links to its WCAG 2.2 "Understanding" page, the relevant W3C techniques (for example [H43](https://www.w3.org/WAI/WCAG22/Techniques/html/H43) for data tables), and Acquia's help article for that check.

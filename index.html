@@ -128,6 +128,9 @@ tr.mx-clickrow:hover td { background: color-mix(in srgb, var(--color-fg) 4%, tra
 .mx-chip .mx-c { font-variant-numeric: tabular-nums; color: var(--color-fg-muted); }
 .mx-chip[aria-pressed="true"] .mx-c { color: var(--color-bg); }
 #mx-issues-title:focus { outline: none; }
+.mx-refs { display: flex; flex-wrap: wrap; gap: 2px var(--cds-gap-sm); min-width: 9rem; }
+.mx-refs a { white-space: nowrap; color: var(--color-fg); text-decoration-color: var(--color-border-line); text-underline-offset: 2px; }
+.mx-refs a:hover { text-decoration-color: currentColor; }
 .mx-empty { color: var(--color-ok); font-size: var(--cds-font-size-body); }
 @media (max-width: 640px) { .mx-hide-narrow { display: none; } }
 [data-dash-source-state=empty] { color: transparent; }
@@ -159,6 +162,7 @@ tr.mx-clickrow:hover td { background: color-mix(in srgb, var(--color-fg) 4%, tra
           <th data-field="instances">Instances</th>
           <th data-field="pages" class="mx-n">Pages</th>
           <th data-field="sites" class="mx-n">Sites</th>
+          <th data-field="references">References</th>
         </tr></thead>
         <tbody data-draw="types"></tbody>
       </table>
@@ -226,6 +230,7 @@ tr.mx-clickrow:hover td { background: color-mix(in srgb, var(--color-fg) 4%, tra
           <th data-field="wcag" class="mx-hide-narrow">WCAG</th>
           <th data-field="pages_affected" class="mx-n">Pages</th>
           <th data-field="example_page">Example page</th>
+          <th data-source="error_types" data-field="references">References</th>
           <th data-field="html_snippet" class="mx-hide-narrow">Failing HTML</th>
         </tr></thead>
         <tbody data-draw="issuerows"></tbody>
@@ -299,6 +304,20 @@ const barTd = (tr, value, max, hi) => {
   w.append(b, t); c.appendChild(w); tr.appendChild(c);
 };
 
+const refsTd = (tr, refs, cls) => {
+  const c = document.createElement('td'); if (cls) c.className = cls;
+  const w = document.createElement('div'); w.className = 'mx-refs';
+  for (const part of String(refs || '').split(';;')) {
+    const i = part.indexOf('|'); if (i < 0) continue;
+    const url = part.slice(i + 1);
+    if (!/^https:\/\//.test(url)) continue;
+    const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = part.slice(0, i); w.appendChild(a);
+  }
+  c.appendChild(w); tr.appendChild(c);
+};
+const refsFor = (error) => ((dash.data('error_types').data || []).find((r) => r.error === error) || {}).references || '';
+
 dash.draw('types', (tb) => {
   const d = dash.data('error_types');
   tb.replaceChildren();
@@ -309,6 +328,7 @@ dash.draw('types', (tb) => {
     td(tr, r.error); td(tr, r.wcag); pill(tr, r.severity);
     barTd(tr, num(r.instances), max, r.severity === 'high');
     td(tr, fmt(num(r.pages)), 'mx-n'); td(tr, fmt(num(r.sites)), 'mx-n');
+    refsTd(tr, r.references);
     tb.appendChild(tr);
   }
 });
@@ -373,6 +393,7 @@ dash.draw('issuerows', (tb) => {
       c.appendChild(a);
     }
     tr.appendChild(c);
+    refsTd(tr, refsFor(r.error));
     const h = document.createElement('td'); h.className = 'mx-hide-narrow';
     const code = document.createElement('code'); code.textContent = r.html_snippet; h.appendChild(code); tr.appendChild(h);
     frag.appendChild(tr);
