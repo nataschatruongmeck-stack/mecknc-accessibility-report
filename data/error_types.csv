@@ -1,0 +1,14 @@
+error,wcag,severity,instances,pages,sites
+Text fails minimum contrast requirements,1.4.3 (AA),high,105,28,6
+Image is missing alternative text,1.1.1 (A),high,15,21,5
+Scrollable content is not accessible using the keyboard,2.1.1 (A),high,9,8,6
+Link is missing an accessible name,4.1.2 (A),high,4,3,3
+Link text fails minimum contrast requirements,1.4.3 (AA),high,4,3,2
+ARIA element is missing required context,1.3.1 (A),medium,289,25,3
+Complex data table is missing ID and/or header attributes to associate headers with data cells,1.3.1 (A),medium,134,76,16
+Parent element is missing required children,1.3.1 (A),medium,114,51,8
+Heading is missing an accessible name,1.3.1 (A),medium,34,15,9
+Link inside text is difficult to see or identify,1.4.1 (A),medium,14,5,4
+Undefined ARIA attribute must not be used,1.3.1 (A),medium,8,8,1
+Incorrect use of ARIA state or property,4.1.2 (A),medium,3,2,1
+Iframe element is missing an accessible name,4.1.2 (A),low,538,547,14

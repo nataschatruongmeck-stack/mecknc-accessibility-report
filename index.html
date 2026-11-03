@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MeckNC Accessibility Content Errors</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400&display=swap">
+<style>
+:root {
+  --color-bg: #f7f8fa; --color-panel: #ffffff; --color-fg: #1b2330; --color-fg-muted: #5a6474;
+  --color-border-line: #dde2ea; --color-ok: #1f7a4d; --color-warn: #a35f00; --color-bad: #b42318;
+  --cds-chart-muted: #9aa6b8; --cds-chart-status-critical: #c8372d;
+  --font-anthropic-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-anthropic-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cds-font-size-caption: 0.8125rem; --cds-font-size-body: 0.9375rem; --cds-font-size-heading: 1.125rem; --cds-font-size-title: 2rem;
+  --cds-font-weight-medium: 500;
+  --cds-gap-xs: 0.25rem; --cds-gap-sm: 0.5rem; --cds-gap-md: 1rem; --cds-gap-lg: 1.5rem; --cds-gap-xl: 2rem;
+  --cds-pad-xs: 0.375rem; --cds-pad-sm: 0.625rem; --cds-pad-md: 1rem; --cds-pad-lg: 1.25rem;
+  --cds-radius: 8px; --cds-dur-slow: 300ms;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #12161d; --color-panel: #1a2029; --color-fg: #e6e9ef; --color-fg-muted: #9aa4b3;
+    --color-border-line: #2c3440; --color-ok: #5cc98f; --color-warn: #f0b354; --color-bad: #ff8a7a;
+    --cds-chart-muted: #5d6878; --cds-chart-status-critical: #ff7a6a; color-scheme: dark;
+  }
+}
+html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: 15px; }
+#dash-root { padding-block: 2rem 3rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.mx-foot { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); line-height: 1.6; }
+.mx-foot a { color: inherit; }
+:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+/* Minimal stand-in for the dashboard runtime: loads the CSV snapshots and redraws. */
+(function () {
+  const files = { sites: 'data/sites.csv', error_types: 'data/error_types.csv', issues: 'data/issues.csv', excluded: 'data/excluded.csv' };
+  const store = {}; const calcs = {}; const draws = {};
+  for (const id in files) store[id] = { status: 'loading', data: [] };
+  const runDraw = (name) => document.querySelectorAll('[data-draw="' + name + '"]').forEach((el) => { try { draws[name](el); } catch (e) { console.error(e); } });
+  window.dash = {
+    data: (id) => store[id] || { status: 'missing', data: [] },
+    calc: (id, spec) => { calcs[id] = spec; store[id] = { status: 'loading', data: [] }; },
+    draw: (name, fn) => { if (fn) draws[name] = fn; if (draws[name] && document.readyState !== 'loading') runDraw(name); },
+  };
+  const all = () => Object.keys(draws).forEach(runDraw);
+  Promise.all(Object.entries(files).map(([id, url]) => fetch(url).then((r) => { if (!r.ok) throw new Error(url); return r.text(); })
+    .then((t) => { store[id] = { status: 'ok', data: d3.csvParse(t) }; })
+    .catch(() => { store[id] = { status: 'error', data: [] }; })))
+    .then(() => {
+      for (const id in calcs) {
+        const c = calcs[id];
+        if (c.inputs.every((i) => store[i].status === 'ok')) store[id] = { status: 'ok', data: c.fn(...c.inputs.map((i) => store[i].data)) };
+        else store[id] = { status: 'error', data: [] };
+      }
+      all();
+    });
+  document.addEventListener('DOMContentLoaded', all);
+})();
+</script>
+</head>
+<body>
+<main id="dash-root">
+<style>
+#dash-root .mx { display: flex; flex-direction: column; gap: var(--cds-gap-xl); font-family: var(--font-anthropic-sans); max-width: 76rem; margin-inline: auto; }
+.mx h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+.mx h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+.mx p { margin: 0; }
+.mx-head { display: flex; flex-direction: column; gap: var(--cds-gap-sm); }
+.mx-lede { color: var(--color-fg-muted); max-width: 60rem; line-height: 1.5; }
+.mx-lede b { color: var(--color-fg); font-weight: 600; }
+.mx-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: var(--cds-gap-md); }
+.mx-tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+.mx-tile .mx-num { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.mx-tile .mx-lab { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.mx-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-md); min-width: 0; }
+.mx-note { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); line-height: 1.5; }
+.mx-scroll { overflow: auto; max-height: 34rem; }
+.mx-scroll.mx-short { max-height: none; }
+.mx table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.mx th { text-align: left; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); position: sticky; top: 0; background: var(--color-panel); z-index: 1; white-space: nowrap; }
+.mx td { padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+.mx td.mx-n, .mx th.mx-n { text-align: right; white-space: nowrap; }
+.mx-barcell { display: flex; align-items: center; gap: var(--cds-gap-sm); min-width: 9rem; }
+.mx-bar { height: 0.5rem; border-radius: 2px; background: var(--cds-chart-muted); flex: none; }
+.mx-bar.mx-hi { background: var(--cds-chart-status-critical); }
+.mx-pill { display: inline-block; padding: 0 var(--cds-pad-xs); border-radius: 999px; border: 1px solid currentColor; font-size: var(--cds-font-size-caption); line-height: 1.5; white-space: nowrap; }
+.mx-sev-high { color: var(--color-bad); }
+.mx-sev-medium { color: var(--color-warn); }
+.mx-sev-low { color: var(--color-fg-muted); }
+.mx-zero { color: var(--color-ok); }
+.mx code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; word-break: break-all; color: var(--color-fg-muted); }
+.mx a { color: inherit; }
+.mx-url { color: var(--color-fg-muted); word-break: break-all; }
+.mx-tools { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: end; }
+.mx-tools label { display: flex; flex-direction: column; gap: 2px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mx-tools input, .mx-tools select { font: inherit; font-size: var(--cds-font-size-body); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); min-width: 0; }
+.mx-tools input { width: min(100%, 18rem); }
+.mx-count { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-left: auto; }
+.mx-hide-narrow { }
+@media (max-width: 640px) { .mx-hide-narrow { display: none; } }
+[data-dash-source-state=empty] { color: transparent; }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+</style>
+
+<div class="mx">
+  <header class="mx-head" id="summary">
+    <h1>MeckNC accessibility content errors</h1>
+    <p class="mx-lede">WCAG 2.2 AA results from Acquia Web Governance for the Drupal sites on mecknc.gov, with shared template issues and PDFs set aside. <b data-draw="clean" data-source="totals" data-field="sites_clean">—</b> of <b data-draw="sites" data-source="totals" data-field="sites">—</b> sites have no content errors, and the top 4 sites hold <b data-draw="top4" data-source="totals" data-field="top4_share">—</b> of the errors that remain.</p>
+  </header>
+
+  <div class="mx-tiles">
+    <div class="mx-tile"><span class="mx-num" data-draw="t-sites" data-source="totals" data-field="sites">—</span><span class="mx-lab">Drupal sites on mecknc.gov in scope</span></div>
+    <div class="mx-tile"><span class="mx-num" data-draw="t-witherr" data-source="totals" data-field="sites_with_errors">—</span><span class="mx-lab">Sites with content errors</span></div>
+    <div class="mx-tile"><span class="mx-num" data-draw="t-inst" data-source="totals" data-field="instances">—</span><span class="mx-lab">Content error instances (unique HTML snippets)</span></div>
+    <div class="mx-tile"><span class="mx-num" data-draw="t-pages" data-source="totals" data-field="pages">—</span><span class="mx-lab">Pages with content errors, of <span data-draw="t-scanned" data-source="totals" data-field="pages_scanned">—</span> scanned</span></div>
+  </div>
+
+  <section class="mx-card" id="by-type">
+    <h2>Errors by type</h2>
+    <p class="mx-note">High-severity errors first. An instance is one failing HTML snippet on one site; the same snippet can appear on several pages.</p>
+    <div class="mx-scroll mx-short">
+      <table data-source="error_types" data-row-key="error">
+        <thead><tr>
+          <th data-field="error">Error</th>
+          <th data-field="wcag">WCAG</th>
+          <th data-field="severity">Severity</th>
+          <th data-field="instances">Instances</th>
+          <th data-field="pages" class="mx-n">Pages</th>
+          <th data-field="sites" class="mx-n">Sites</th>
+        </tr></thead>
+        <tbody data-draw="types"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mx-card" id="by-site">
+    <h2>Sites</h2>
+    <p class="mx-note">Sorted by content error instances. Several small sites were scanned on only a few pages, so a zero there means little was checked.</p>
+    <div class="mx-scroll">
+      <table data-source="sites" data-row-key="site">
+        <thead><tr>
+          <th data-field="site">Site</th>
+          <th data-field="content_issues">Instances</th>
+          <th data-field="pages_with_content_errors" class="mx-n">Pages with errors</th>
+          <th data-field="pages_scanned" class="mx-n">Pages scanned</th>
+          <th data-field="top_errors" class="mx-hide-narrow">Most common errors</th>
+        </tr></thead>
+        <tbody data-draw="sitesrows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mx-card" id="issues">
+    <h2>Issue list</h2>
+    <p class="mx-note">Every content error with an example page and the failing HTML. Filter by site or severity, or search any text.</p>
+    <div class="mx-tools">
+      <label for="mx-site">Site
+        <select id="mx-site" data-draw="sitepick" data-source="sites"></select>
+      </label>
+      <label for="mx-sev">Severity
+        <select id="mx-sev" class="mx-sev-filter">
+          <option value="">All severities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </label>
+      <label for="mx-q">Search
+        <input id="mx-q" class="mx-search" type="search" placeholder="Error, page or HTML">
+      </label>
+      <span class="mx-count"><span data-draw="shown" data-source="issues">—</span> issues shown</span>
+    </div>
+    <div class="mx-scroll">
+      <table data-source="issues" data-row-key="issue_id">
+        <thead><tr>
+          <th data-field="site">Site</th>
+          <th data-field="error">Error</th>
+          <th data-field="severity">Severity</th>
+          <th data-field="wcag" class="mx-hide-narrow">WCAG</th>
+          <th data-field="pages_affected" class="mx-n">Pages</th>
+          <th data-field="example_page">Example page</th>
+          <th data-field="html_snippet" class="mx-hide-narrow">Failing HTML</th>
+        </tr></thead>
+        <tbody data-draw="issuerows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mx-card" id="set-aside">
+    <h2>Set aside for the redesign</h2>
+    <p class="mx-note">Markup that fails identically on 3 or more sites, a theme component that renders an empty element, or a social icon link (an SVG inside a link) with no accessible name, counts as template and is left out above. Errors from PDFs opened in the browser's PDF viewer are also left out; they need fixing in the PDF files.</p>
+    <div class="mx-scroll mx-short">
+      <table data-source="excluded" data-row-key="item">
+        <thead><tr>
+          <th data-field="item">What</th>
+          <th data-field="bucket">Type</th>
+          <th data-field="snippets" class="mx-n">Distinct snippets</th>
+          <th data-field="sites" class="mx-n">Sites</th>
+        </tr></thead>
+        <tbody data-draw="exrows"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+const fmt = d3.format(',');
+const num = (v) => Number(v) || 0;
+
+dash.calc('totals', {
+  title: 'Totals across sites',
+  description: 'Counts sites, instances and pages from the per-site table, and the share of instances on the 4 sites with the most.',
+  inputs: ['sites'],
+  fn: (sites) => {
+    const n = (v) => Number(v) || 0;
+    const inst = sites.map((s) => n(s.content_issues)).sort((a, b) => b - a);
+    const total = inst.reduce((a, b) => a + b, 0);
+    const top4 = inst.slice(0, 4).reduce((a, b) => a + b, 0);
+    return [{
+      sites: sites.length,
+      sites_with_errors: sites.filter((s) => n(s.content_issues) > 0).length,
+      sites_clean: sites.filter((s) => n(s.content_issues) === 0).length,
+      instances: total,
+      pages: sites.reduce((a, s) => a + n(s.pages_with_content_errors), 0),
+      pages_scanned: sites.reduce((a, s) => a + n(s.pages_scanned), 0),
+      top4_share: total ? top4 / total : 0,
+    }];
+  },
+});
+
+const totalCell = (field, f) => (el) => {
+  const t = dash.data('totals');
+  el.textContent = t.status === 'ok' && t.data[0] ? f(t.data[0][field]) : '—';
+};
+dash.draw('clean', totalCell('sites_clean', fmt));
+dash.draw('sites', totalCell('sites', fmt));
+dash.draw('top4', totalCell('top4_share', d3.format('.0%')));
+dash.draw('t-sites', totalCell('sites', fmt));
+dash.draw('t-witherr', totalCell('sites_with_errors', fmt));
+dash.draw('t-inst', totalCell('instances', fmt));
+dash.draw('t-pages', totalCell('pages', fmt));
+dash.draw('t-scanned', totalCell('pages_scanned', fmt));
+
+const td = (tr, text, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = text; tr.appendChild(c); return c; };
+const pill = (tr, sev) => { const c = document.createElement('td'); const s = document.createElement('span'); s.className = 'mx-pill mx-sev-' + sev; s.textContent = sev; c.appendChild(s); tr.appendChild(c); };
+const barTd = (tr, value, max, hi) => {
+  const c = document.createElement('td');
+  const w = document.createElement('div'); w.className = 'mx-barcell';
+  const b = document.createElement('span'); b.className = 'mx-bar' + (hi ? ' mx-hi' : '');
+  b.style.width = (max ? Math.max(2, 96 * value / max) : 0) + 'px';
+  const t = document.createElement('span'); t.textContent = fmt(value);
+  w.append(b, t); c.appendChild(w); tr.appendChild(c);
+};
+
+dash.draw('types', (tb) => {
+  const d = dash.data('error_types');
+  tb.replaceChildren();
+  if (d.status !== 'ok') return;
+  const max = d3.max(d.data, (r) => num(r.instances));
+  for (const r of d.data) {
+    const tr = document.createElement('tr');
+    td(tr, r.error); td(tr, r.wcag); pill(tr, r.severity);
+    barTd(tr, num(r.instances), max, r.severity === 'high');
+    td(tr, fmt(num(r.pages)), 'mx-n'); td(tr, fmt(num(r.sites)), 'mx-n');
+    tb.appendChild(tr);
+  }
+});
+
+dash.draw('sitesrows', (tb) => {
+  const d = dash.data('sites');
+  tb.replaceChildren();
+  if (d.status !== 'ok') return;
+  const rows = d.data.slice().sort((a, b) => num(b.content_issues) - num(a.content_issues) || a.site.localeCompare(b.site));
+  const max = d3.max(rows, (r) => num(r.content_issues));
+  for (const r of rows) {
+    const tr = document.createElement('tr'); tr.dataset.key = r.site;
+    const c = document.createElement('td');
+    const name = document.createElement('div'); name.textContent = r.site;
+    const u = document.createElement('a'); u.className = 'mx-url'; u.href = r.url; u.target = '_blank'; u.rel = 'noopener'; u.textContent = r.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    c.append(name, u); tr.appendChild(c);
+    barTd(tr, num(r.content_issues), max, false);
+    td(tr, fmt(num(r.pages_with_content_errors)), 'mx-n' + (num(r.content_issues) === 0 ? ' mx-zero' : ''));
+    td(tr, fmt(num(r.pages_scanned)), 'mx-n');
+    td(tr, r.top_errors, 'mx-hide-narrow');
+    tb.appendChild(tr);
+  }
+});
+
+dash.draw('sitepick', (sel) => {
+  const d = dash.data('sites');
+  const cur = sel.value;
+  const names = d.status === 'ok' ? d.data.filter((r) => num(r.content_issues) > 0).map((r) => r.site).sort() : [];
+  sel.replaceChildren(new Option('All sites', ''), ...names.map((n) => new Option(n, n)));
+  sel.value = names.includes(cur) ? cur : '';
+});
+
+const issueFilter = () => {
+  const site = (document.querySelector('#mx-site') || {}).value || '';
+  const sev = (document.querySelector('.mx-sev-filter') || {}).value || '';
+  const q = ((document.querySelector('.mx-search') || {}).value || '').trim().toLowerCase();
+  return (r) => (!site || r.site === site) && (!sev || r.severity === sev) &&
+    (!q || [r.site, r.error, r.example_page, r.html_snippet, r.wcag].join(' ').toLowerCase().includes(q));
+};
+
+dash.draw('issuerows', (tb) => {
+  const d = dash.data('issues');
+  tb.replaceChildren();
+  if (d.status !== 'ok') return;
+  const keep = issueFilter();
+  const frag = document.createDocumentFragment();
+  for (const r of d.data) {
+    if (!keep(r)) continue;
+    const tr = document.createElement('tr'); tr.dataset.key = r.issue_id;
+    td(tr, r.site); td(tr, r.error); pill(tr, r.severity); td(tr, r.wcag, 'mx-hide-narrow');
+    td(tr, fmt(num(r.pages_affected)), 'mx-n');
+    const c = document.createElement('td');
+    if (r.example_page) {
+      const a = document.createElement('a'); a.href = r.example_page; a.target = '_blank'; a.rel = 'noopener';
+      a.className = 'mx-url'; a.textContent = r.example_page.replace(/^https?:\/\//, '');
+      c.appendChild(a);
+    }
+    tr.appendChild(c);
+    const h = document.createElement('td'); h.className = 'mx-hide-narrow';
+    const code = document.createElement('code'); code.textContent = r.html_snippet; h.appendChild(code); tr.appendChild(h);
+    frag.appendChild(tr);
+  }
+  tb.appendChild(frag);
+});
+
+dash.draw('shown', (el) => {
+  const d = dash.data('issues');
+  el.textContent = d.status === 'ok' ? fmt(d.data.filter(issueFilter()).length) : '—';
+});
+
+const redrawIssues = () => { dash.draw('issuerows'); dash.draw('shown'); };
+document.querySelectorAll('#mx-site, .mx-sev-filter').forEach((el) => el.addEventListener('change', redrawIssues));
+document.querySelectorAll('.mx-search').forEach((el) => el.addEventListener('input', redrawIssues));
+
+dash.draw('exrows', (tb) => {
+  const d = dash.data('excluded');
+  tb.replaceChildren();
+  if (d.status !== 'ok') return;
+  for (const r of d.data) {
+    const tr = document.createElement('tr');
+    td(tr, r.item); td(tr, r.bucket); td(tr, fmt(num(r.snippets)), 'mx-n'); td(tr, fmt(num(r.sites)), 'mx-n');
+    tb.appendChild(tr);
+  }
+});
+</script>
+<p class="mx-foot" style="max-width:76rem;margin:2rem auto 0;">Snapshot exported from the Acquia Web Governance API on November 2, 2026. Download the data: <a href="data/sites.csv">sites</a>, <a href="data/error_types.csv">errors by type</a>, <a href="data/issues.csv">issue list</a>, <a href="data/excluded.csv">set-aside items</a>.</p>
+</main>
+</body>
+</html>

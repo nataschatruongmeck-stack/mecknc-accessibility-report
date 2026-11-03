@@ -1,0 +1,42 @@
+site,url,pages_scanned,content_issues,pages_with_content_errors,top_errors
+LUE - MeckNC - AirQuality,https://airquality.mecknc.gov,383,457,56,ARIA element is missing required context (285) | Parent element is missing required children (100) | Complex data table is missing ID and/or header attributes to associate headers with data cells (27)
+HLD - MeckNC,https://hl.mecknc.gov,1198,369,378,Iframe element is missing an accessible name (363) | Heading is missing an accessible name (2) | Complex data table is missing ID and/or header attributes to associate headers with data cells (2)
+PRK - MeckNC,https://parkandrec.mecknc.gov,235,148,131,Iframe element is missing an accessible name (121) | Complex data table is missing ID and/or header attributes to associate headers with data cells (22) | Link inside text is difficult to see or identify (2)
+HLT - MeckNC,https://health.mecknc.gov,211,107,31,Text fails minimum contrast requirements (77) | Undefined ARIA attribute must not be used (8) | Iframe element is missing an accessible name (7)
+LUE - MeckNC - stormwaterservices,http://stormwaterservices.mecknc.gov,75,40,30,Complex data table is missing ID and/or header attributes to associate headers with data cells (32) | Iframe element is missing an accessible name (8)
+LUE - MeckNC - code,https://code.mecknc.gov,104,38,13,Complex data table is missing ID and/or header attributes to associate headers with data cells (25) | Heading is missing an accessible name (4) | Iframe element is missing an accessible name (4)
+LUE - MeckNC - wipeoutwaste,https://wipeoutwaste.mecknc.gov,57,18,16,Iframe element is missing an accessible name (13) | Scrollable content is not accessible using the keyboard (2) | Text fails minimum contrast requirements (2)
+MGR - MeckNC,https://mgr.mecknc.gov,39,17,4,Heading is missing an accessible name (11) | Iframe element is missing an accessible name (2) | ARIA element is missing required context (2)
+DSS - MeckNC - cfas,https://cfas.mecknc.gov,55,15,7,Image is missing alternative text (10) | Iframe element is missing an accessible name (5)
+LUE - MeckNC - firemarshal,https://firemarshal.mecknc.gov,21,9,1,Complex data table is missing ID and/or header attributes to associate headers with data cells (8) | Scrollable content is not accessible using the keyboard (1)
+OED - MeckNC,https://oed.mecknc.gov,21,7,7,Parent element is missing required children (5) | Link is missing an accessible name (1) | Complex data table is missing ID and/or header attributes to associate headers with data cells (1)
+DSS - MeckNC - dcr,https://dcr.mecknc.gov,38,7,6,Iframe element is missing an accessible name (5) | Complex data table is missing ID and/or header attributes to associate headers with data cells (2)
+HLT - MeckNC - eh,https://eh.mecknc.gov,263,7,3,Heading is missing an accessible name (4) | Complex data table is missing ID and/or header attributes to associate headers with data cells (3)
+CSS - MeckNC,https://css.mecknc.gov,47,5,5,Iframe element is missing an accessible name (5)
+TAX - MeckNC,https://tax.mecknc.gov,73,4,2,ARIA element is missing required context (2) | Link inside text is difficult to see or identify (1) | Parent element is missing required children (1)
+REG - MeckNC,https://deeds.mecknc.gov,13,3,2,Text fails minimum contrast requirements (2) | Scrollable content is not accessible using the keyboard (1)
+BOCC - MeckNC,https://bocc.mecknc.gov,35,3,1,Complex data table is missing ID and/or header attributes to associate headers with data cells (3)
+ELE - MeckNC.gov,https://vote.mecknc.gov,37,3,3,Image is missing alternative text (1) | Heading is missing an accessible name (1) | Complex data table is missing ID and/or header attributes to associate headers with data cells (1)
+MGR - MeckNC ADA,https://ada.mecknc.gov,9,2,1,Text fails minimum contrast requirements (2)
+FIN - MeckNC,https://fin.mecknc.gov,12,2,1,Iframe element is missing an accessible name (2)
+MGR - MeckNC - Budget,https://budget.mecknc.gov,14,2,1,Complex data table is missing ID and/or header attributes to associate headers with data cells (2)
+CJS - MeckNC,https://cjs.mecknc.gov,39,2,1,Iframe element is missing an accessible name (1) | Parent element is missing required children (1)
+HRS - MeckNC,https://hr.mecknc.gov,24,2,2,Complex data table is missing ID and/or header attributes to associate headers with data cells (2)
+PID - MeckNC - media,https://media.mecknc.gov,3,1,1,Iframe element is missing an accessible name (1)
+PID - MeckNC - calendar,https://calendar.mecknc.gov,18,1,1,Heading is missing an accessible name (1)
+PRK - MeckNC - latta,https://latta.mecknc.gov,6,1,1,Complex data table is missing ID and/or header attributes to associate headers with data cells (1)
+PID - MeckNC - news,https://news.mecknc.gov,16,1,15,Image is missing alternative text (1)
+DSS - MeckNC,https://dss.mecknc.gov,2,0,0,
+AUD - MeckNC,https://audit.mecknc.gov,3,0,0,
+LUE - MeckNC,https://luesa.mecknc.gov,4,0,0,
+AFM - MeckNC,https://afm.mecknc.gov,7,0,0,
+ATY - MeckNC,https://aty.mecknc.gov,5,0,0,
+HHS - MeckNC,https://hhs.mecknc.gov,2,0,0,
+HLT - MeckNC - cit,https://cit.mecknc.gov,88,0,0,
+ITS - MeckNC,https://it.mecknc.gov,5,0,0,
+LUE - MeckNC - conserve,https://conserve.mecknc.gov,25,0,0,
+PID - MeckNC,https://pi.mecknc.gov,23,0,0,
+MED - MeckNC,https://med.mecknc.gov,6,0,0,
+PID - MeckNC.gov - www,https://www.mecknc.gov,13,0,0,
+MGR - MeckNC - strategy,https://strategy.mecknc.gov,5,0,0,
+HLT - MeckNC - covid-19,https://covid-19.mecknc.gov,4,0,0,
