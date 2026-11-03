@@ -32,6 +32,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
 .mx-foot { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); line-height: 1.6; }
 .mx-foot a { color: inherit; }
 :focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+[hidden] { display: none !important; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>
@@ -128,6 +129,9 @@ tr.mx-clickrow:hover td { background: color-mix(in srgb, var(--color-fg) 4%, tra
 .mx-chip .mx-c { font-variant-numeric: tabular-nums; color: var(--color-fg-muted); }
 .mx-chip[aria-pressed="true"] .mx-c { color: var(--color-bg); }
 #mx-issues-title:focus { outline: none; }
+.mx-errmeta { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mx-errsites { max-height: 20rem; overflow: auto; }
+.mx-errsites table th { background: var(--color-bg); }
 .mx-status { display: flex; flex-direction: column; gap: 4px; min-width: 8.5rem; }
 .mx-status select, .mx-status input { font: inherit; font-size: var(--cds-font-size-caption); padding: 2px 4px; border: 1px solid var(--color-border-line); border-radius: 4px; background: var(--color-bg); color: var(--color-fg); min-width: 0; width: 100%; box-sizing: border-box; }
 .mx-status select.is-fixed { border-color: var(--color-ok); color: var(--color-ok); font-weight: 600; }
@@ -165,7 +169,7 @@ tr.mx-done td:first-child { opacity: 1; }
 
   <section class="mx-card" id="by-type">
     <h2>Errors by type</h2>
-    <p class="mx-note">High-severity errors first. An instance is one failing HTML snippet on one site; the same snippet can appear on several pages.</p>
+    <p class="mx-note">High-severity errors first. Click an error to see which sites have it. An instance is one failing HTML snippet on one site; the same snippet can appear on several pages.</p>
     <div class="mx-scroll mx-short">
       <table data-source="error_types" data-row-key="error">
         <thead><tr>
@@ -215,6 +219,26 @@ tr.mx-done td:first-child { opacity: 1; }
       <div>
         <div class="mx-eyebrow" style="margin-bottom: var(--cds-gap-sm);">Errors on this site. Click one to filter.</div>
         <div class="mx-chips" data-draw="sitetypes"></div>
+      </div>
+    </div>
+    <div class="mx-sitebar" id="mx-errbar" hidden>
+      <div class="mx-sitebar-head">
+        <div>
+          <div class="mx-eyebrow">Error</div>
+          <h3 id="mx-errname"></h3>
+          <div class="mx-errmeta" data-draw="errmeta"></div>
+        </div>
+        <button type="button" class="mx-btn" id="mx-allerrors">Show all errors</button>
+      </div>
+      <div class="mx-stats" data-draw="errstats"></div>
+      <div>
+        <div class="mx-eyebrow" style="margin-bottom: var(--cds-gap-sm);">Sites with this error. Click one to see only its issues.</div>
+        <div class="mx-errsites">
+          <table>
+            <thead><tr><th>Site</th><th>Instances</th><th class="mx-n">Pages affected</th></tr></thead>
+            <tbody data-draw="errsites"></tbody>
+          </table>
+        </div>
       </div>
     </div>
     <div class="mx-tools">
@@ -358,8 +382,14 @@ dash.draw('types', (tb) => {
   if (d.status !== 'ok') return;
   const max = d3.max(d.data, (r) => num(r.instances));
   for (const r of d.data) {
-    const tr = document.createElement('tr');
-    td(tr, r.error); td(tr, r.wcag); pill(tr, r.severity);
+    const tr = document.createElement('tr'); tr.dataset.key = r.error; tr.className = 'mx-clickrow';
+    tr.addEventListener('click', (ev) => { if (!ev.target.closest('a, button')) openError(r.error); });
+    const c = document.createElement('td');
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'mx-sitebtn'; btn.textContent = r.error;
+    btn.setAttribute('aria-label', 'Show sites with ' + r.error);
+    btn.addEventListener('click', () => openError(r.error));
+    c.appendChild(btn); tr.appendChild(c);
+    td(tr, r.wcag); pill(tr, r.severity);
     barTd(tr, num(r.instances), max, r.severity === 'high');
     td(tr, fmt(num(r.pages)), 'mx-n'); td(tr, fmt(num(r.sites)), 'mx-n');
     refsTd(tr, r.references);
@@ -535,6 +565,14 @@ const renderSiteBar = () => {
   if (!bar) return;
   const site = currentSite();
   bar.hidden = !site;
+  const ebar = document.querySelector('#mx-errbar');
+  if (ebar) {
+    ebar.hidden = !!site || !state.errType;
+    if (!ebar.hidden) {
+      const n = document.querySelector('#mx-errname'); if (n) n.textContent = state.errType;
+      dash.draw('errmeta'); dash.draw('errstats'); dash.draw('errsites');
+    }
+  }
   if (!site) return;
   const s = (dash.data('sites').data || []).find((r) => r.site === site) || {};
   const nameEl = document.querySelector('#mx-sitename'); if (nameEl) nameEl.textContent = site;
@@ -571,26 +609,82 @@ dash.draw('sitetypes', (el) => {
     const t = document.createElement('span'); t.className = 'mx-t'; t.textContent = label;
     const c = document.createElement('span'); c.className = 'mx-c'; c.textContent = fmt(count);
     b.append(t, c);
-    b.addEventListener('click', () => { state.errType = state.errType === value ? '' : value; redrawIssues(); });
+    b.addEventListener('click', () => { state.errType = state.errType === value ? '' : value; redrawIssues(); setHash(); });
     el.appendChild(b);
   };
   chip('All errors', d3.sum(groups, (g) => g[1].n), '', '');
   for (const [name, g] of groups) chip(name, g.n, g.sev, name);
 });
 
+const errRow = () => (dash.data('error_types').data || []).find((r) => r.error === state.errType);
+
+dash.draw('errmeta', (el) => {
+  el.replaceChildren();
+  const r = errRow(); if (!r) return;
+  const w = document.createElement('span'); w.textContent = 'WCAG ' + r.wcag; el.appendChild(w);
+  const s = document.createElement('span'); s.className = 'mx-pill mx-sev-' + r.severity; s.textContent = r.severity; el.appendChild(s);
+  const tmp = document.createElement('tr'); refsTd(tmp, r.references);
+  const refs = tmp.querySelector('.mx-refs'); if (refs) el.appendChild(refs);
+});
+
+dash.draw('errstats', (el) => {
+  el.replaceChildren();
+  const r = errRow(); if (!r) return;
+  const stat = (value, label) => { const d = document.createElement('div'); d.className = 'mx-stat'; const b = document.createElement('b'); b.textContent = value; const l = document.createElement('span'); l.textContent = label; d.append(b, l); el.appendChild(d); };
+  stat(fmt(num(r.instances)), 'instances');
+  stat(fmt(num(r.pages)), 'pages');
+  stat(fmt(num(r.sites)), num(r.sites) === 1 ? 'site' : 'sites');
+});
+
+dash.draw('errsites', (tb) => {
+  tb.replaceChildren();
+  const d = dash.data('issues');
+  if (!state.errType || d.status !== 'ok') return;
+  const groups = d3.rollups(d.data.filter((r) => r.error === state.errType), (v) => ({ n: v.length, pages: d3.sum(v, (x) => num(x.pages_affected)) }), (r) => r.site)
+    .sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0]));
+  const max = d3.max(groups, (g) => g[1].n);
+  for (const [site, g] of groups) {
+    const tr = document.createElement('tr'); tr.className = 'mx-clickrow'; tr.dataset.key = site;
+    tr.addEventListener('click', (ev) => { if (!ev.target.closest('button')) openSite(site, state.errType); });
+    const c = document.createElement('td');
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'mx-sitebtn'; btn.textContent = site;
+    btn.setAttribute('aria-label', 'Show ' + state.errType + ' issues on ' + site);
+    btn.addEventListener('click', () => openSite(site, state.errType));
+    c.appendChild(btn); tr.appendChild(c);
+    barTd(tr, g.n, max, false);
+    td(tr, fmt(g.pages), 'mx-n');
+    tb.appendChild(tr);
+  }
+});
+
 const setHash = () => {
   const site = currentSite();
-  const h = site ? '#site=' + encodeURIComponent(site) : '';
+  const parts = [];
+  if (site) parts.push('site=' + encodeURIComponent(site));
+  if (state.errType) parts.push('error=' + encodeURIComponent(state.errType));
+  const h = parts.length ? '#' + parts.join('&') : '';
   if (location.hash !== h) history.replaceState(null, '', h || location.pathname + location.search);
 };
 
 function redrawIssues() { dash.draw('issuerows'); dash.draw('shown'); renderSiteBar(); }
 
-function openSite(name) {
+function goToIssues() {
+  const sec = document.querySelector('#issues');
+  if (sec) sec.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  const h = document.querySelector('#mx-issues-title'); if (h) h.focus({ preventScroll: true });
+}
+
+function openError(name) {
+  const sel = document.querySelector('#mx-site'); if (sel) sel.value = '';
+  state.errType = name;
+  redrawIssues(); setHash(); goToIssues();
+}
+
+function openSite(name, errType) {
   const sel = document.querySelector('#mx-site');
   if (!sel) return;
   sel.value = name;
-  state.errType = '';
+  state.errType = errType || '';
   redrawIssues(); setHash();
   const sec = document.querySelector('#issues');
   if (sec) sec.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
@@ -600,6 +694,10 @@ function openSite(name) {
 document.querySelectorAll('#mx-site').forEach((el) => el.addEventListener('change', () => { state.errType = ''; redrawIssues(); setHash(); }));
 document.querySelectorAll('.mx-sev-filter, .mx-status-filter').forEach((el) => el.addEventListener('change', redrawIssues));
 document.querySelectorAll('.mx-search').forEach((el) => el.addEventListener('input', redrawIssues));
+document.querySelectorAll('#mx-allerrors').forEach((el) => el.addEventListener('click', () => {
+  state.errType = ''; redrawIssues(); setHash();
+  const s = document.querySelector('#by-type'); if (s) s.scrollIntoView({ block: 'start' });
+}));
 document.querySelectorAll('#mx-allsites').forEach((el) => el.addEventListener('click', () => {
   const sel = document.querySelector('#mx-site'); if (sel) sel.value = '';
   state.errType = ''; redrawIssues(); setHash();
@@ -607,8 +705,10 @@ document.querySelectorAll('#mx-allsites').forEach((el) => el.addEventListener('c
 }));
 
 const openFromHash = () => {
-  const m = location.hash.match(/^#site=(.+)$/);
-  if (m) openSite(decodeURIComponent(m[1]));
+  const params = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const site = params.get('site'), err = params.get('error');
+  if (site) openSite(site, err || '');
+  else if (err) openError(err);
 };
 dash.onReady(openFromHash);
 window.addEventListener('hashchange', openFromHash);

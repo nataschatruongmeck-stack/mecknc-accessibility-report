@@ -73,3 +73,11 @@ Each issue's References column shows its links correctly. Updating the README an
 ## User — 2026-11-02 23:05:27
 
 Also, can I mark what was done with each item and then push that to web governance. For example, fixed
+
+## Assistant — 2026-11-02 23:09:38
+
+Testing the preview with a sample export. Preview only reads from Web Governance and changes nothing:
+
+## User — 2026-11-02 23:12:57
+
+I also want to click on Errors by type and go to the a list of sites with those errors
