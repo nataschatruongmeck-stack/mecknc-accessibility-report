@@ -1,3 +1,5 @@
 .env
 *.env
 .DS_Store
+chat-log.md
+_probe.html

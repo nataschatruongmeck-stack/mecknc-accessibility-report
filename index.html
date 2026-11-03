@@ -142,9 +142,10 @@ tr.mx-done td { opacity: 0.6; }
 tr.mx-done td:first-child { opacity: 1; }
 .mx-mine { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); align-items: end; padding: var(--cds-pad-sm) var(--cds-pad-md); border: 1px dashed var(--color-border-line); border-radius: var(--cds-radius); }
 .mx-mine label { display: flex; flex-direction: column; gap: 2px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
-.mx-mine input[type=text] { font: inherit; font-size: var(--cds-font-size-body); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); width: min(100%, 14rem); }
+.mx-mine label[for="mx-name"] { flex: 0 1 16rem; min-width: 0; }
+.mx-mine input[type=text] { font: inherit; font-size: var(--cds-font-size-body); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); width: 100%; box-sizing: border-box; }
 .mx-mine .mx-mine-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); flex-basis: 100%; }
-.mx-mine-count { font-size: var(--cds-font-size-caption); color: var(--color-fg); align-self: center; }
+.mx-mine-count { font-size: var(--cds-font-size-caption); color: var(--color-fg); align-self: end; padding-block: var(--cds-pad-xs); line-height: 1.6; }
 .mx-refs { display: flex; flex-wrap: wrap; gap: 2px var(--cds-gap-sm); min-width: 9rem; }
 .mx-refs a { white-space: nowrap; color: var(--color-fg); text-decoration-color: var(--color-border-line); text-underline-offset: 2px; }
 .mx-refs a:hover { text-decoration-color: currentColor; }
