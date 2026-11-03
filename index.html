@@ -48,7 +48,7 @@ html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); fon
     draw: (name, fn) => { if (fn) draws[name] = fn; if (draws[name] && document.readyState !== 'loading') runDraw(name); },
   };
   const all = () => Object.keys(draws).forEach(runDraw);
-  Promise.all(Object.entries(files).map(([id, url]) => fetch(url).then((r) => { if (!r.ok) throw new Error(url); return r.text(); })
+  Promise.all(Object.entries(files).map(([id, url]) => fetch(url, { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error(url); return r.text(); })
     .then((t) => { store[id] = { status: 'ok', data: d3.csvParse(t) }; })
     .catch(() => { store[id] = { status: 'error', data: [] }; })))
     .then(() => {
