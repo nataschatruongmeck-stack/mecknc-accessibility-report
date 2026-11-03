@@ -128,6 +128,19 @@ tr.mx-clickrow:hover td { background: color-mix(in srgb, var(--color-fg) 4%, tra
 .mx-chip .mx-c { font-variant-numeric: tabular-nums; color: var(--color-fg-muted); }
 .mx-chip[aria-pressed="true"] .mx-c { color: var(--color-bg); }
 #mx-issues-title:focus { outline: none; }
+.mx-status { display: flex; flex-direction: column; gap: 4px; min-width: 8.5rem; }
+.mx-status select, .mx-status input { font: inherit; font-size: var(--cds-font-size-caption); padding: 2px 4px; border: 1px solid var(--color-border-line); border-radius: 4px; background: var(--color-bg); color: var(--color-fg); min-width: 0; width: 100%; box-sizing: border-box; }
+.mx-status select.is-fixed { border-color: var(--color-ok); color: var(--color-ok); font-weight: 600; }
+.mx-status select.is-ignore { border-color: var(--color-fg-muted); color: var(--color-fg-muted); font-weight: 600; }
+.mx-status select.is-confirmed { border-color: var(--color-bad); color: var(--color-bad); font-weight: 600; }
+.mx-status select.is-progress { border-color: var(--color-warn); color: var(--color-warn); font-weight: 600; }
+tr.mx-done td { opacity: 0.6; }
+tr.mx-done td:first-child { opacity: 1; }
+.mx-mine { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); align-items: end; padding: var(--cds-pad-sm) var(--cds-pad-md); border: 1px dashed var(--color-border-line); border-radius: var(--cds-radius); }
+.mx-mine label { display: flex; flex-direction: column; gap: 2px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mx-mine input[type=text] { font: inherit; font-size: var(--cds-font-size-body); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); width: min(100%, 14rem); }
+.mx-mine .mx-mine-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); flex-basis: 100%; }
+.mx-mine-count { font-size: var(--cds-font-size-caption); color: var(--color-fg); align-self: center; }
 .mx-refs { display: flex; flex-wrap: wrap; gap: 2px var(--cds-gap-sm); min-width: 9rem; }
 .mx-refs a { white-space: nowrap; color: var(--color-fg); text-decoration-color: var(--color-border-line); text-underline-offset: 2px; }
 .mx-refs a:hover { text-decoration-color: currentColor; }
@@ -216,14 +229,35 @@ tr.mx-clickrow:hover td { background: color-mix(in srgb, var(--color-fg) 4%, tra
           <option value="low">Low</option>
         </select>
       </label>
+      <label for="mx-stf">Status
+        <select id="mx-stf" class="mx-status-filter">
+          <option value="">Any status</option>
+          <option value="none">Not marked</option>
+          <option value="progress">In progress</option>
+          <option value="fixed">Fixed</option>
+          <option value="ignore">Ignore</option>
+          <option value="confirmed">Confirmed</option>
+        </select>
+      </label>
       <label for="mx-q">Search
         <input id="mx-q" class="mx-search" type="search" placeholder="Error, page or HTML">
       </label>
       <span class="mx-count"><span data-draw="shown" data-source="issues">—</span> issues shown</span>
     </div>
+    <div class="mx-mine">
+      <label for="mx-name">Your name
+        <input id="mx-name" type="text" autocomplete="name" placeholder="Shown with your statuses">
+      </label>
+      <span class="mx-mine-count" id="mx-mine-count">No statuses marked yet</span>
+      <button type="button" class="mx-btn" id="mx-export">Export my statuses</button>
+      <label class="mx-btn" for="mx-import" style="flex-direction: row; color: var(--color-fg); cursor: pointer;">Import statuses<input id="mx-import" type="file" accept=".csv,text/csv" hidden></label>
+      <button type="button" class="mx-btn" id="mx-clear">Clear my statuses</button>
+      <p class="mx-mine-note" id="mx-mine-msg">Mark each issue's status as you work. Statuses are saved in this browser only. When you're ready, export them and send the file to the report owner to update Web Governance.</p>
+    </div>
     <div class="mx-scroll">
       <table data-source="issues" data-row-key="issue_id">
         <thead><tr>
+          <th>Status</th>
           <th data-field="site">Site</th>
           <th data-field="error">Error</th>
           <th data-field="severity">Severity</th>
@@ -367,13 +401,99 @@ dash.draw('sitepick', (sel) => {
 });
 
 const state = { errType: '' };
+const STATUS_KEY = 'mx-status-v1', NAME_KEY = 'mx-name-v1';
+const STATUS_LABELS = { '': 'Not marked', progress: 'In progress', fixed: 'Fixed', ignore: 'Ignore', confirmed: 'Confirmed' };
+const loadStatuses = () => { try { return JSON.parse(localStorage.getItem(STATUS_KEY) || '{}') || {}; } catch (e) { return {}; } };
+let statuses = loadStatuses();
+const saveStatuses = () => { try { localStorage.setItem(STATUS_KEY, JSON.stringify(statuses)); return true; } catch (e) { return false; } };
+const myName = () => ((document.querySelector('#mx-name') || {}).value || '').trim();
+const statusOf = (id) => (statuses[id] && statuses[id].status) || '';
 const issueFilter = () => {
   const site = (document.querySelector('#mx-site') || {}).value || '';
   const sev = (document.querySelector('.mx-sev-filter') || {}).value || '';
   const q = ((document.querySelector('.mx-search') || {}).value || '').trim().toLowerCase();
+  const stf = (document.querySelector('.mx-status-filter') || {}).value || '';
   return (r) => (!site || r.site === site) && (!sev || r.severity === sev) && (!state.errType || r.error === state.errType) &&
+    (!stf || (stf === 'none' ? !statusOf(r.issue_id) : statusOf(r.issue_id) === stf)) &&
     (!q || [r.site, r.error, r.example_page, r.html_snippet, r.wcag].join(' ').toLowerCase().includes(q));
 };
+
+const statusClass = (s) => ({ fixed: 'is-fixed', ignore: 'is-ignore', confirmed: 'is-confirmed', progress: 'is-progress' }[s] || '');
+const statusTd = (tr, r) => {
+  const c = document.createElement('td');
+  const w = document.createElement('div'); w.className = 'mx-status';
+  const sel = document.createElement('select'); sel.setAttribute('aria-label', 'Status for ' + r.error + ' on ' + r.site);
+  for (const [v, l] of Object.entries(STATUS_LABELS)) sel.appendChild(new Option(l, v));
+  const cur = statuses[r.issue_id] || {};
+  sel.value = cur.status || ''; sel.className = statusClass(sel.value);
+  const note = document.createElement('input'); note.type = 'text'; note.placeholder = 'Note (optional)'; note.value = cur.note || '';
+  note.setAttribute('aria-label', 'Note for ' + r.error + ' on ' + r.site);
+  note.hidden = !sel.value;
+  tr.classList.toggle('mx-done', sel.value === 'fixed' || sel.value === 'ignore');
+  const commit = () => {
+    if (!sel.value) delete statuses[r.issue_id];
+    else statuses[r.issue_id] = { status: sel.value, note: note.value.trim(), by: myName(), at: new Date().toISOString(),
+      site: r.site, error: r.error, example_page: r.example_page };
+    saveStatuses(); updateMine();
+  };
+  sel.addEventListener('change', () => {
+    sel.className = statusClass(sel.value); note.hidden = !sel.value;
+    tr.classList.toggle('mx-done', sel.value === 'fixed' || sel.value === 'ignore');
+    commit(); if (sel.value) note.focus();
+  });
+  note.addEventListener('change', commit);
+  w.append(sel, note); c.appendChild(w); tr.appendChild(c);
+};
+
+const updateMine = () => {
+  const vals = Object.values(statuses);
+  const el = document.querySelector('#mx-mine-count'); if (!el) return;
+  if (!vals.length) { el.textContent = 'No statuses marked yet'; return; }
+  const by = d3.rollup(vals, (v) => v.length, (v) => v.status);
+  el.textContent = vals.length + ' marked: ' + ['fixed', 'ignore', 'confirmed', 'progress'].filter((k) => by.get(k)).map((k) => by.get(k) + ' ' + STATUS_LABELS[k].toLowerCase()).join(', ');
+};
+const setMsg = (text) => { const m = document.querySelector('#mx-mine-msg'); if (m) m.textContent = text; };
+
+const csvCell = (v) => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+document.querySelectorAll('#mx-export').forEach((b) => b.addEventListener('click', () => {
+  const ids = Object.keys(statuses);
+  if (!ids.length) { setMsg('Nothing to export yet. Mark at least one issue first.'); return; }
+  const name = myName();
+  const cols = ['issue_id', 'status', 'note', 'by', 'marked_at', 'site', 'error', 'example_page'];
+  const lines = [cols.join(',')].concat(ids.map((id) => { const s = statuses[id];
+    return [id, s.status, s.note, s.by || name, s.at, s.site, s.error, s.example_page].map(csvCell).join(','); }));
+  const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'accessibility-statuses-' + (name ? name.replace(/[^A-Za-z0-9]+/g, '-').toLowerCase() + '-' : '') + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  setMsg('Exported ' + ids.length + ' statuses. Send the file to the report owner to update Web Governance.');
+}));
+document.querySelectorAll('#mx-import').forEach((inp) => inp.addEventListener('change', () => {
+  const f = inp.files && inp.files[0]; if (!f) return;
+  f.text().then((text) => {
+    const rows = d3.csvParse(text); let n = 0;
+    for (const r of rows) {
+      if (!r.issue_id || !STATUS_LABELS[r.status] || !r.status) continue;
+      statuses[r.issue_id] = { status: r.status, note: r.note || '', by: r.by || '', at: r.marked_at || new Date().toISOString(), site: r.site, error: r.error, example_page: r.example_page };
+      n++;
+    }
+    saveStatuses(); updateMine(); redrawIssues(); inp.value = '';
+    setMsg('Imported ' + n + ' statuses.');
+  }).catch(() => setMsg('That file could not be read. Choose a CSV exported from this page.'));
+}));
+document.querySelectorAll('#mx-clear').forEach((b) => {
+  let armed = false;
+  b.addEventListener('click', () => {
+    if (!armed) { armed = true; b.textContent = 'Click again to clear all'; setTimeout(() => { armed = false; b.textContent = 'Clear my statuses'; }, 4000); return; }
+    statuses = {}; saveStatuses(); updateMine(); redrawIssues(); armed = false; b.textContent = 'Clear my statuses';
+    setMsg('Cleared all statuses in this browser.');
+  });
+});
+document.querySelectorAll('#mx-name').forEach((inp) => {
+  try { inp.value = localStorage.getItem(NAME_KEY) || ''; } catch (e) {}
+  inp.addEventListener('change', () => { try { localStorage.setItem(NAME_KEY, inp.value.trim()); } catch (e) {} });
+});
+updateMine();
 
 dash.draw('issuerows', (tb) => {
   const d = dash.data('issues');
@@ -384,6 +504,7 @@ dash.draw('issuerows', (tb) => {
   for (const r of d.data) {
     if (!keep(r)) continue;
     const tr = document.createElement('tr'); tr.dataset.key = r.issue_id;
+    statusTd(tr, r);
     td(tr, r.site); td(tr, r.error); pill(tr, r.severity); td(tr, r.wcag, 'mx-hide-narrow');
     td(tr, fmt(num(r.pages_affected)), 'mx-n');
     const c = document.createElement('td');
@@ -477,7 +598,7 @@ function openSite(name) {
 }
 
 document.querySelectorAll('#mx-site').forEach((el) => el.addEventListener('change', () => { state.errType = ''; redrawIssues(); setHash(); }));
-document.querySelectorAll('.mx-sev-filter').forEach((el) => el.addEventListener('change', redrawIssues));
+document.querySelectorAll('.mx-sev-filter, .mx-status-filter').forEach((el) => el.addEventListener('change', redrawIssues));
 document.querySelectorAll('.mx-search').forEach((el) => el.addEventListener('input', redrawIssues));
 document.querySelectorAll('#mx-allsites').forEach((el) => el.addEventListener('click', () => {
   const sel = document.querySelector('#mx-site'); if (sel) sel.value = '';

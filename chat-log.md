@@ -65,3 +65,11 @@ I also updated `content-errors-by-site.csv` and `content-errors-detail.csv` in y
 ## User — 2026-11-02 23:02:38
 
 Can you add references links to each issue? for example https://www.w3.org/WAI/WCAG22/Techniques/html/H43
+
+## Assistant — 2026-11-02 23:05:05
+
+Each issue's References column shows its links correctly. Updating the README and pushing:
+
+## User — 2026-11-02 23:05:27
+
+Also, can I mark what was done with each item and then push that to web governance. For example, fixed
